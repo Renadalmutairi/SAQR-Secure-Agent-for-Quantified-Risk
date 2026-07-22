@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🦅 SAQR
+# 🦅 SAQR 
 
 ### Multi-Agent Financial Crime Intelligence Platform
 
