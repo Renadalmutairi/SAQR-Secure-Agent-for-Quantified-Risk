@@ -1,0 +1,232 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: saqr
+      POSTGRES_PASSWORD: saqr
+      POSTGRES_DB: saqr_behavioral_dna
+    ports:
+      - "5432:5432"
+    volumes:
+      - saqr_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U saqr -d saqr_behavioral_dna"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  kafka:
+    image: apache/kafka:3.8.0
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: "0"
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+    volumes:
+      - saqr_kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  behavioral-dna-engine:
+    build:
+      context: ./services/behavioral-dna-engine
+    ports:
+      - "8001:8001"
+    environment:
+      SAQR_ENV: local
+      SAQR_DB_DSN: postgresql+asyncpg://saqr:saqr@postgres:5432/saqr_behavioral_dna
+      SAQR_REDIS_URL: redis://redis:6379/0
+      SAQR_REDIS_ENABLED: "true"
+      SAQR_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SAQR_KAFKA_OUTPUT_TOPIC: saqr.behavioral-dna.profile-updates
+      SAQR_KAFKA_ENABLED: "true"
+      SAQR_MIN_HISTORY_FOR_FULL_CONFIDENCE: "30"
+      SAQR_TRANSACTIONS_CSV_PATH: /data/transactions.csv
+      # 3 uvicorn workers (see Dockerfile) x (pool 10 + overflow 5) = 45 max
+      # connections, safely under Postgres's default max_connections (100).
+      SAQR_DB_POOL_SIZE: "10"
+      SAQR_DB_MAX_OVERFLOW: "5"
+    volumes:
+      - ./transactions.csv:/data/transactions.csv:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  neo4j:
+    image: neo4j:5-community
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/saqr_graph_pw
+      NEO4J_PLUGINS: '["graph-data-science"]'
+      NEO4J_dbms_security_procedures_unrestricted: gds.*
+    volumes:
+      - saqr_neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+
+  ingestion-gateway:
+    build:
+      context: ./services/ingestion-gateway
+    environment:
+      SAQR_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SAQR_RAW_TX_TOPIC: saqr.transactions.raw
+      SAQR_TRANSACTIONS_CSV_PATH: /data/transactions.csv
+    volumes:
+      - ./transactions.csv:/data/transactions.csv:ro
+    depends_on:
+      kafka:
+        condition: service_healthy
+    # One-shot: publishes the CSV to Kafka and exits. Run on demand via
+    # `docker compose run --rm ingestion-gateway`, not part of `up`.
+    profiles: ["tools"]
+
+  graph-intelligence-engine:
+    build:
+      context: ./services/graph-intelligence-engine
+    ports:
+      - "8002:8002"
+    environment:
+      SAQR_ENV: local
+      SAQR_NEO4J_URI: bolt://neo4j:7687
+      SAQR_NEO4J_USER: neo4j
+      SAQR_NEO4J_PASSWORD: saqr_graph_pw
+      SAQR_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SAQR_RAW_TX_TOPIC: saqr.transactions.raw
+      SAQR_BEHAVIORAL_DNA_TOPIC: saqr.behavioral-dna.profile-updates
+      SAQR_OUTPUT_TOPIC: saqr.graph-intelligence.updates
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  trust-intelligence-engine:
+    build:
+      context: ./services/trust-intelligence-engine
+    ports:
+      - "8003:8003"
+    environment:
+      SAQR_ENV: local
+      SAQR_BEHAVIORAL_DNA_BASE_URL: http://behavioral-dna-engine:8001
+      SAQR_GRAPH_INTELLIGENCE_BASE_URL: http://graph-intelligence-engine:8002
+      SAQR_UPSTREAM_TIMEOUT_SECONDS: "3.0"
+    depends_on:
+      - behavioral-dna-engine
+      - graph-intelligence-engine
+    # No database, cache, or queue - stateless, synchronous REST fan-out to
+    # Agent 1 and Agent 2 only. Deliberately no service_healthy condition on
+    # them (neither defines a healthcheck): individual /trust/evaluate calls
+    # degrade gracefully if an upstream isn't ready yet, by design.
+
+  compliance-intelligence-engine:
+    build:
+      context: ./services/compliance-intelligence-engine
+    ports:
+      - "8004:8004"
+    environment:
+      SAQR_ENV: local
+      SAQR_BEHAVIORAL_DNA_BASE_URL: http://behavioral-dna-engine:8001
+      SAQR_GRAPH_INTELLIGENCE_BASE_URL: http://graph-intelligence-engine:8002
+      SAQR_TRUST_INTELLIGENCE_BASE_URL: http://trust-intelligence-engine:8003
+      SAQR_UPSTREAM_TIMEOUT_SECONDS: "3.0"
+      SAQR_POLICY_REGISTRY_DIR: /data/compliance_policies/registry
+    volumes:
+      - ./compliance_policies:/data/compliance_policies:ro
+    depends_on:
+      - behavioral-dna-engine
+      - graph-intelligence-engine
+      - trust-intelligence-engine
+    # No database, cache, or queue - stateless, synchronous REST fan-out to
+    # Agent 1, Agent 2, and Agent 3, plus a one-time YAML registry load at
+    # startup. No service_healthy condition on the upstream agents: individual
+    # /compliance/evaluate calls degrade gracefully (rules fall back to
+    # UNEVALUATED) if an upstream isn't ready yet, by design.
+
+  decision-intelligence-engine:
+    build:
+      context: ./services/decision-intelligence-engine
+    ports:
+      - "8005:8005"
+    environment:
+      SAQR_ENV: local
+      SAQR_BEHAVIORAL_DNA_BASE_URL: http://behavioral-dna-engine:8001
+      SAQR_GRAPH_INTELLIGENCE_BASE_URL: http://graph-intelligence-engine:8002
+      SAQR_TRUST_INTELLIGENCE_BASE_URL: http://trust-intelligence-engine:8003
+      SAQR_COMPLIANCE_BASE_URL: http://compliance-intelligence-engine:8004
+      SAQR_UPSTREAM_TIMEOUT_SECONDS: "3.0"
+    depends_on:
+      - behavioral-dna-engine
+      - graph-intelligence-engine
+      - trust-intelligence-engine
+      - compliance-intelligence-engine
+    # No database, cache, or queue - stateless, synchronous REST fan-out to
+    # Agent 1, Agent 2, Agent 3, and Agent 4 - the final layer of the
+    # pipeline. No service_healthy condition on the upstream agents:
+    # individual /decision/evaluate calls degrade gracefully (unavailable
+    # agents are excluded from fusion, never treated as neutral) if an
+    # upstream isn't ready yet, by design.
+
+  dashboard:
+    build:
+      context: ./services/dashboard
+    ports:
+      - "8080:8080"
+    environment:
+      SAQR_ENV: local
+      SAQR_BEHAVIORAL_DNA_BASE_URL: http://behavioral-dna-engine:8001
+      SAQR_GRAPH_INTELLIGENCE_BASE_URL: http://graph-intelligence-engine:8002
+      SAQR_TRUST_INTELLIGENCE_BASE_URL: http://trust-intelligence-engine:8003
+      SAQR_COMPLIANCE_BASE_URL: http://compliance-intelligence-engine:8004
+      SAQR_DECISION_BASE_URL: http://decision-intelligence-engine:8005
+      SAQR_UPSTREAM_TIMEOUT_SECONDS: "10.0"
+      SAQR_TRANSACTIONS_CSV_PATH: /data/transactions.csv
+      SAQR_BENCHMARK_JOBS_DIR: /srv/benchmark_data/jobs
+      SAQR_INFRA_SNAPSHOT_PATH: /srv/benchmark_data/infra_snapshot.json
+    volumes:
+      - ./transactions.csv:/data/transactions.csv:ro
+      - ./services/dashboard/benchmark_data:/srv/benchmark_data
+    depends_on:
+      - behavioral-dna-engine
+      - graph-intelligence-engine
+      - trust-intelligence-engine
+      - compliance-intelligence-engine
+      - decision-intelligence-engine
+    # Orchestration and visualization only - not an intelligent agent, no
+    # database of its own. Drives the Token Generation Station demo (Agent 1
+    # owns the actual token registry) and serves the operator UI. No
+    # service_healthy condition on the 5 agents: it degrades gracefully and
+    # halts the demo sequence on the first real failure, by design.
+
+volumes:
+  saqr_postgres_data:
+  saqr_kafka_data:
+  saqr_neo4j_data:

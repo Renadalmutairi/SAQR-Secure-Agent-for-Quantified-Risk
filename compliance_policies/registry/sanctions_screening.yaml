@@ -1,0 +1,113 @@
+# Sanctions screening rules
+# Extracted from: CMA_Targeted_Financial_Sanctions.pdf, Chapters III, V, VI
+
+- rule_id: SANC-001
+  category: SANCTIONS_SCREENING
+  title: Screening required before new relationship/account/transaction
+  source_document: CMA_Targeted_Financial_Sanctions.pdf
+  source_reference: "3.5(a), 3.5(b)"
+  description: >
+    Screening against sanctions lists must occur before establishing a new
+    business relationship, opening an account or e-wallet, and before
+    executing any financial transaction (domestic or international).
+  trigger: new_relationship_or_transaction
+  severity: blocking
+
+- rule_id: SANC-002
+  category: SANCTIONS_SCREENING
+  title: Real-time screening of outgoing/incoming transactions
+  source_document: CMA_Targeted_Financial_Sanctions.pdf
+  source_reference: "3.6(a)"
+  description: >
+    All outgoing transactions must be screened before execution; incoming
+    transactions screened upon receipt - not deferred to end of day or any
+    batch window.
+  trigger: transaction_screening
+  severity: blocking
+
+- rule_id: SANC-003
+  category: SANCTIONS_SCREENING
+  title: Quarterly comprehensive re-screening
+  source_document: CMA_Targeted_Financial_Sanctions.pdf
+  source_reference: "3.6(b)"
+  description: >
+    A comprehensive screening of the full customer/transaction/beneficial-
+    owner database against sanctions lists must occur at minimum once every
+    three months.
+  trigger: scheduled_comprehensive_screening
+  threshold: {interval_months: 3}
+  severity: violation_if_missing
+
+- rule_id: SANC-004
+  category: SANCTIONS_SCREENING
+  title: Immediate re-screening on sanctions list update
+  source_document: CMA_Targeted_Financial_Sanctions.pdf
+  source_reference: "3.6(c), 4.1"
+  description: >
+    Upon any update to the sanctions lists, all customer/transaction/
+    beneficial-owner/related-party data must be re-screened against the
+    updated list immediately, with the update logged.
+  trigger: sanctions_list_updated
+  severity: blocking
+
+- rule_id: SANC-005
+  category: SANCTIONS_SCREENING
+  title: Look-back review on new listing
+  source_document: CMA_Targeted_Financial_Sanctions.pdf
+  source_reference: "3.4"
+  description: >
+    When a person is newly added to a sanctions list, the institution must
+    review transactions from the previous 12 months to identify any prior
+    dealings with that person.
+  trigger: new_sanctions_listing
+  threshold: {lookback_months: 12}
+  severity: violation_if_missing
+
+- rule_id: SANC-006
+  category: SANCTIONS_SCREENING
+  title: Freeze without delay on confirmed match
+  source_document: CMA_Targeted_Financial_Sanctions.pdf
+  source_reference: "5.5, 6.1"
+  description: >
+    Once a sanctions match is confirmed, funds must be frozen without delay
+    and without prior notice to the customer. Freezing may not be deferred
+    pending internal committee approval, legal review, or senior management
+    sign-off.
+  trigger: confirmed_sanctions_match
+  severity: blocking
+
+- rule_id: SANC-007
+  category: SANCTIONS_SCREENING
+  title: Dual-control alert review
+  source_document: CMA_Targeted_Financial_Sanctions.pdf
+  source_reference: "5.3"
+  description: >
+    Sanctions alert review and resolution must be conducted by two qualified
+    personnel (dual-control) with sufficient sanctions-matter experience.
+  trigger: alert_review_process
+  severity: violation_if_missing
+
+- rule_id: SANC-008
+  category: SANCTIONS_SCREENING
+  title: Fuzzy/phonetic name matching required
+  source_document: CMA_Targeted_Financial_Sanctions.pdf
+  source_reference: "3.7"
+  description: >
+    Screening systems must be capable of detecting matches across aliases,
+    spelling variations, phonetically similar names, and phonetic
+    translations - not exact-string matching only.
+  trigger: screening_system_capability_check
+  severity: violation_if_missing
+
+- rule_id: SANC-009
+  category: SANCTIONS_SCREENING
+  title: Beneficial/indirect ownership by listed person triggers freeze
+  source_document: CMA_Targeted_Financial_Sanctions.pdf
+  source_reference: "6.3, 6.6"
+  description: >
+    Freezing extends to funds/entities owned or controlled - wholly or
+    partially, directly or indirectly - by a listed person, including shell
+    companies, joint accounts, and complex ownership structures designed to
+    conceal control.
+  trigger: indirect_listed_person_control
+  severity: blocking

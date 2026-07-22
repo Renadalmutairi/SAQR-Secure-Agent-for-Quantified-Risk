@@ -1,0 +1,6 @@
+{
+  "name": "SAQR Compliance & Benchmark Dashboard",
+  "description": "Orchestration, demo, and benchmark dashboard for SAQR, a 5-agent AML, fraud, and compliance platform for Saudi & GCC banking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

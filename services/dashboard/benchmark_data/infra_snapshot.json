@@ -1,0 +1,56 @@
+{
+  "captured_at": "2026-07-17T07:17:44.959337+00:00",
+  "note": "Captured during real concurrent load: Benchmark 1 (pipeline, 1000 real transactions) and Benchmark 2 (token generation, 50000 real synthetic tokens) running simultaneously.",
+  "containers": [
+    {
+      "name": "saqrai-dashboard-1",
+      "cpu_percent": 77.11,
+      "mem_usage_mb": 136.5
+    },
+    {
+      "name": "saqrai-behavioral-dna-engine-1",
+      "cpu_percent": 245.36,
+      "mem_usage_mb": 237.2
+    },
+    {
+      "name": "saqrai-decision-intelligence-engine-1",
+      "cpu_percent": 0.4,
+      "mem_usage_mb": 42.28
+    },
+    {
+      "name": "saqrai-compliance-intelligence-engine-1",
+      "cpu_percent": 0.51,
+      "mem_usage_mb": 41.77
+    },
+    {
+      "name": "saqrai-graph-intelligence-engine-1",
+      "cpu_percent": 9.78,
+      "mem_usage_mb": 68.9
+    },
+    {
+      "name": "saqrai-trust-intelligence-engine-1",
+      "cpu_percent": 0.32,
+      "mem_usage_mb": 40.56
+    },
+    {
+      "name": "saqrai-neo4j-1",
+      "cpu_percent": 103.6,
+      "mem_usage_mb": 1173.5
+    },
+    {
+      "name": "saqrai-postgres-1",
+      "cpu_percent": 64.28,
+      "mem_usage_mb": 187.5
+    },
+    {
+      "name": "saqrai-kafka-1",
+      "cpu_percent": 5.31,
+      "mem_usage_mb": 760.8
+    },
+    {
+      "name": "saqrai-redis-1",
+      "cpu_percent": 1.58,
+      "mem_usage_mb": 10.2
+    }
+  ]
+}

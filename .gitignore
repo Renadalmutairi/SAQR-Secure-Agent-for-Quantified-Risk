@@ -1,0 +1,25 @@
+# Secrets - never commit
+.env
+.env.production
+.env.local
+!.env.example
+
+# Local tool config
+.claude/
+.DS_Store
+
+# Build artifacts / dependencies
+node_modules/
+dist/
+__pycache__/
+*.pyc
+.venv/
+
+# Zips already extracted into the repo as source dirs
+*.zip
+
+# Runtime job data, not source
+services/dashboard/benchmark_data/jobs/*.json
+
+# Stray duplicate extraction artifact, not part of the project
+google-ai-studio-dashboard/saqr-compliance-&-benchmark-dashboard (2)/

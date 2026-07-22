@@ -1,0 +1,82 @@
+# Reporting obligations (STR/SAR) and record-keeping thresholds
+# Extracted from: SAMA_Implementing_Regulation.pdf (Articles 15, 16, 23),
+#   SAMA_AML_Law.pdf, CMA_Targeted_Financial_Sanctions.pdf (Chapter VII)
+
+- rule_id: RPT-001
+  category: REPORTING_OBLIGATIONS
+  title: Suspicious Transaction Report (STR) obligation has no minimum amount
+  source_document: SAMA_Implementing_Regulation.pdf
+  source_reference: "Article 15/2"
+  description: >
+    The obligation to report a suspicious transaction to the General
+    Directorate of Financial Intelligence applies regardless of the amounts
+    involved - there is no minimum transaction size that exempts a
+    suspicious transaction from reporting.
+  trigger: suspected_money_laundering
+  severity: blocking
+
+- rule_id: RPT-002
+  category: REPORTING_OBLIGATIONS
+  title: STR minimum required content
+  source_document: SAMA_Implementing_Regulation.pdf
+  source_reference: "Article 15/4"
+  description: >
+    An STR must include at minimum: names/addresses/phone numbers of parties
+    involved, a statement of the suspicious transaction and its
+    circumstances, the amount and relevant accounts, and the reasons for
+    suspicion.
+  trigger: str_filing
+  severity: violation_if_missing
+
+- rule_id: RPT-003
+  category: REPORTING_OBLIGATIONS
+  title: Tipping-off prohibition
+  source_document: SAMA_Implementing_Regulation.pdf
+  source_reference: "Article 7/9, Chapter IX (TFS Rules) 9.2"
+  description: >
+    An institution that suspects money laundering and believes performing
+    due diligence would tip off the customer may skip due diligence and file
+    an STR instead, stating why. Disclosing to a customer or third party that
+    a report will be/has been filed is prohibited.
+  trigger: tipping_off_risk
+  severity: blocking
+
+- rule_id: RPT-004
+  category: REPORTING_OBLIGATIONS
+  title: Ten-year record retention
+  source_document: SAMA_AML_Law.pdf
+  source_reference: "Anti-Money Laundering Law (general record-keeping requirement)"
+  description: >
+    Records must be retained for a minimum of 10 years from the date the
+    transaction was completed or the account closed, sufficient to allow
+    transaction reconstruction, and readily available to competent
+    authorities. Matches the Targeted Financial Sanctions Rules' own 10-year
+    retention requirement (CMA_Targeted_Financial_Sanctions.pdf, 7.3).
+  trigger: record_retention_check
+  threshold: {retention_years: 10}
+  severity: violation_if_missing
+
+- rule_id: RPT-005
+  category: REGULATORY_THRESHOLDS
+  title: Cross-border currency/valuables declaration threshold
+  source_document: SAMA_Implementing_Regulation.pdf
+  source_reference: "Article 23/1, 23/8"
+  description: >
+    Currency, bearer negotiable instruments, precious metals/stones, or
+    jewelry valued at or above SAR 60,000 must be declared when entering or
+    exiting the Kingdom.
+  trigger: cross_border_valuables_movement
+  threshold: {amount_sar: 60000}
+  severity: violation_if_missing
+
+- rule_id: RPT-006
+  category: REGULATORY_THRESHOLDS
+  title: False customs declaration penalty
+  source_document: SAMA_Implementing_Regulation.pdf
+  source_reference: "Article 23/6"
+  description: >
+    A failed or false declaration (absent ML/predicate-offense suspicion)
+    incurs a fine of 25% of the seized item value on a first offense, 50% on
+    repeat offenses.
+  trigger: false_customs_declaration
+  severity: informational

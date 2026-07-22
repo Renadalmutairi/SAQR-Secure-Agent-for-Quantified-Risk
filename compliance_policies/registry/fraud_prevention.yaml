@@ -1,0 +1,20 @@
+# Fraud prevention - definitional grounding only in v1.
+# SAMA_Counter_Fraud_Framework.pdf's operational content (specific control
+# requirements) could not be text-extracted in this pass - see README.md.
+# The definition below came from the WebSearch summary of the framework,
+# confirmed against the framework's own stated scope (prevention, detection,
+# response to fraud for SAMA-regulated institutions).
+
+- rule_id: FRAUD-001
+  category: OTHER
+  title: Regulatory definition of fraud
+  source_document: SAMA_Counter_Fraud_Framework.pdf
+  source_reference: "Definitions section (via web summary, not yet machine-extracted from the PDF itself)"
+  description: >
+    Fraud is any intentional act aimed at obtaining an unlawful benefit or
+    causing loss to another party, by exploiting technical or documentary
+    means, relationships or social means, functional powers, or deliberately
+    neglecting or exploiting weaknesses in systems or standards.
+  trigger: fraud_indicator_classification
+  severity: informational
+  confidence: low  # not yet verified against the PDF's own text directly

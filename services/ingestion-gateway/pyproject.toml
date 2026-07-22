@@ -1,0 +1,28 @@
+[project]
+name = "saqr-ingestion-gateway"
+version = "0.1.0"
+description = "SAQR ingestion gateway - publishes raw transaction events to Kafka, standing in for a real Core Banking feed."
+requires-python = ">=3.11"
+dependencies = [
+    "aiokafka>=0.12,<0.13",
+    "orjson>=3.10,<4.0",
+    "pydantic>=2.9,<3.0",
+    "pydantic-settings>=2.6,<3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

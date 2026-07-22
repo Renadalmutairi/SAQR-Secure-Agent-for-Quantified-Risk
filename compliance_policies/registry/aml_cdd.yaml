@@ -1,0 +1,132 @@
+# AML / Customer Due Diligence rules
+# Extracted from: SAMA Implementing Regulation to the Anti-Money Laundering Law
+#   (SAMA_Implementing_Regulation.pdf), Articles 5, 7, 8, 9, 14
+# Each rule cites the exact article it comes from - no rule here is invented.
+
+- rule_id: AML-CDD-001
+  category: KYC_CDD
+  title: Due diligence required before new relationship or account
+  source_document: SAMA_Implementing_Regulation.pdf
+  source_reference: "Article 7/1(a)"
+  description: >
+    Due diligence measures must be undertaken before establishing a new
+    business relationship or opening a new account.
+  trigger: new_account_or_relationship
+  severity: violation_if_missing
+
+- rule_id: AML-CDD-002
+  category: KYC_CDD
+  title: Due diligence required regardless of suspicion amount
+  source_document: SAMA_Implementing_Regulation.pdf
+  source_reference: "Article 7/1(d)"
+  description: >
+    Due diligence must be undertaken whenever there is suspicion of money
+    laundering, regardless of the transaction amount involved.
+  trigger: suspicion_of_money_laundering
+  severity: violation_if_missing
+
+- rule_id: AML-CDD-003
+  category: KYC_CDD
+  title: Minimum identity verification for natural person customers
+  source_document: SAMA_Implementing_Regulation.pdf
+  source_reference: "Article 7/2(a)(1)"
+  description: >
+    For a natural-person customer, full legal name, residential/national
+    address, date and place of birth, and nationality must be obtained and
+    verified using reliable, independent source documents.
+  trigger: customer_type_natural_person
+  severity: violation_if_missing
+
+- rule_id: AML-CDD-004
+  category: KYC_CDD
+  title: Beneficial ownership identification threshold
+  source_document: SAMA_Implementing_Regulation.pdf
+  source_reference: "Article 7/2(c)(1)"
+  description: >
+    For a legal-person customer, the natural person who ultimately owns or
+    controls 25% or more of the entity's shares must be identified and their
+    identity verified.
+  trigger: customer_type_legal_person
+  threshold: {beneficial_ownership_percent: 25}
+  severity: violation_if_missing
+
+- rule_id: AML-CDD-005
+  category: KYC_CDD
+  title: Risk-based due diligence depth
+  source_document: SAMA_Implementing_Regulation.pdf
+  source_reference: "Article 7/14"
+  description: >
+    Higher money-laundering risk requires enhanced due diligence (EDD); lower
+    risk permits simplified due diligence (SDD) - but SDD is never permitted
+    if there is any suspicion of money laundering, regardless of the
+    customer's assessed risk level.
+  trigger: risk_based_cdd_depth
+  severity: violation_if_missing
+
+- rule_id: AML-CDD-006
+  category: KYC_CDD
+  title: PEP enhanced due diligence
+  source_document: SAMA_Implementing_Regulation.pdf
+  source_reference: "Article 8/1, 8/2, 8/5"
+  description: >
+    Politically Exposed Persons (heads of state, senior politicians, senior
+    government/judicial/military officials, senior executives of state-owned
+    corporations, senior int'l-organization officials - plus their close
+    associates and family up to 2nd degree) require: senior management
+    approval before establishing/continuing the relationship, established
+    source of wealth/funds, and enhanced ongoing monitoring. Applies to
+    foreign PEPs always; domestic PEPs when assessed as higher risk.
+  trigger: customer_is_pep
+  severity: violation_if_missing
+
+- rule_id: AML-CDD-007
+  category: KYC_CDD
+  title: Cannot open account or must terminate if CDD cannot be completed
+  source_document: SAMA_Implementing_Regulation.pdf
+  source_reference: "Article 7/8"
+  description: >
+    If due diligence obligations cannot be met, the institution may not open
+    the account, establish the relationship, or carry out the transaction;
+    for existing relationships it must terminate the relationship and
+    consider filing an STR.
+  trigger: cdd_incomplete
+  severity: blocking
+
+- rule_id: AML-CDD-008
+  category: AML
+  title: Correspondent banking due diligence
+  source_document: SAMA_Implementing_Regulation.pdf
+  source_reference: "Article 9/1"
+  description: >
+    Before a cross-border correspondent relationship, the institution must
+    gather sufficient information on the respondent institution, assess its
+    AML controls, obtain senior management approval, and confirm the
+    respondent does not allow use of its accounts by shell banks.
+  trigger: correspondent_banking_relationship
+  severity: violation_if_missing
+
+- rule_id: AML-WIRE-001
+  category: TRANSACTION_MONITORING
+  title: Wire transfer originator/beneficiary information required
+  source_document: SAMA_Implementing_Regulation.pdf
+  source_reference: "Article 10/2, 10/3"
+  description: >
+    Every wire transfer (domestic or cross-border) must carry verified
+    originator information (full name; account number or unique traceable
+    reference; address/ID/DOB) and beneficiary information (full name;
+    account number or unique traceable reference). If an institution cannot
+    comply, it must not order the transfer.
+  trigger: wire_transfer
+  severity: blocking
+
+- rule_id: AML-GOV-001
+  category: INTERNAL_GOVERNANCE
+  title: Senior-level AML compliance officer required
+  source_document: SAMA_Implementing_Regulation.pdf
+  source_reference: "Article 14/1(c)"
+  description: >
+    Institutions must appoint an anti-money laundering compliance officer at
+    the senior management level as part of proportionate internal policies,
+    procedures and controls.
+  trigger: institutional_governance_check
+  severity: violation_if_missing

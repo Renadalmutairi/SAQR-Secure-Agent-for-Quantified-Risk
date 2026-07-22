@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Vazirmatn", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-brand-orange-50: #fff6f0;
+  --color-brand-orange-100: #ffe6d5;
+  --color-brand-orange-500: #ff6a00; /* Alinma Orange */
+  --color-brand-orange-600: #e65600;
+  --color-brand-orange-700: #b33e00;
+  --color-brand-orange-950: #2b0c00;
+  
+  --color-cyber-bg: #090a0c;
+  --color-cyber-card: #111317;
+  --color-cyber-card-hover: #171a21;
+  --color-cyber-border: #22262f;
+  --color-cyber-border-focus: #ff6a00;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Custom scrollbar for cyber layout */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #090a0c;
+}
+::-webkit-scrollbar-thumb {
+  background: #22262f;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #ff6a00;
+}
+
+/* Glassmorphism subtle helper */
+.glass-panel {
+  background: rgba(17, 19, 23, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-panel-orange {
+  background: rgba(255, 106, 0, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 106, 0, 0.15);
+}
+
+.glow-orange {
+  box-shadow: 0 0 15px rgba(255, 106, 0, 0.15);
+}
+
+.glow-orange-lg {
+  box-shadow: 0 0 30px rgba(255, 106, 0, 0.3);
+}
+
+/* Pulse animation for running state */
+@keyframes cyber-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.animate-pulse-slow {
+  animation: cyber-pulse 3s infinite ease-in-out;
+}

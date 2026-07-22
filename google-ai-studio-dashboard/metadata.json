@@ -1,0 +1,6 @@
+{
+  "name": "SAQR AI Financial Crime Investigation Platform",
+  "description": "An AI-powered financial crime investigation platform for banking and government financial intelligence. Built with an agentic multi-agent pipeline: DNA, Supervisor, Graph, AML, and Trust agents.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,47 @@
+# International standard-setter rules (supplement to the Saudi regulator
+# rules in aml_cdd.yaml/reporting_obligations.yaml/sanctions_screening.yaml).
+# Extracted from: WOLFSBERG_Correspondent_Banking_Principles_2022.pdf (fully
+# read). BASEL_Sound_Management_ML_Risks.pdf was downloaded but could not be
+# machine-read in this environment (corrupt/unsupported per the PDF reader) -
+# see README.md Known Limitation. FATF's 40 Recommendations could not be
+# downloaded at all - see MISSING_POLICY_REPORT.md.
+
+- rule_id: INTL-001
+  category: AML
+  title: No business arrangements with shell banks
+  source_document: WOLFSBERG_Correspondent_Banking_Principles_2022.pdf
+  source_reference: "Section 5, 'No Business Arrangements with Shell Banks'"
+  description: >
+    An institution must confirm a correspondent relationship counterparty is
+    not a shell bank (no physical presence/meaningful mind-and-management in
+    its country of incorporation, unaffiliated with a supervised financial
+    group) and does not itself provide services to shell banks. Matches and
+    reinforces SAMA_Implementing_Regulation.pdf Article 9/1(e).
+  trigger: correspondent_banking_relationship
+  severity: blocking
+
+- rule_id: INTL-002
+  category: AML
+  title: Due diligence and monitoring form a continuous feedback loop
+  source_document: WOLFSBERG_Correspondent_Banking_Principles_2022.pdf
+  source_reference: "Section 6, 'Monitoring and Reporting of Suspicious Activities'"
+  description: >
+    Due diligence results (e.g. customer/respondent risk rating) must feed
+    into transaction monitoring, and monitoring results (elevated-risk
+    findings) must in turn feed back into the periodic due diligence review -
+    the two are not independent, one-off processes.
+  trigger: risk_based_cdd_depth
+  severity: informational
+
+- rule_id: INTL-003
+  category: KYC_CDD
+  title: Trigger events require immediate risk-profile re-evaluation
+  source_document: WOLFSBERG_Correspondent_Banking_Principles_2022.pdf
+  source_reference: "Section 4, 'Risk Based Due Diligence Guidelines'"
+  description: >
+    A trigger event (adverse financial-crime-related media, adverse customer
+    behavior, or an escalation related to unusual activity) that materially
+    changes a customer/respondent's risk profile must prompt an immediate
+    re-evaluation of the relationship, not wait for the next scheduled review.
+  trigger: risk_based_cdd_depth
+  severity: violation_if_missing

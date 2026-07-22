@@ -1,0 +1,246 @@
+# Production overlay for Hostinger VPS deployment. Differences from
+# docker-compose.yml (local dev):
+#   - Only nginx is publicly exposed (port 80). Every agent, the dashboard,
+#     Postgres, Neo4j, Kafka, and Redis are reachable only on the internal
+#     Docker network - none of them are meant to be internet-facing.
+#   - Strong passwords via .env.production instead of dev defaults.
+#   - Per-service memory limits so one runaway container can't OOM the box.
+#   - restart: unless-stopped everywhere, so the stack survives a VPS reboot.
+#   - The new React frontend is added and built with a same-origin API base
+#     (nginx proxies /api/* to the dashboard service - no CORS needed).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: saqr
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: saqr_behavioral_dna
+    volumes:
+      - saqr_postgres_data:/var/lib/postgresql/data
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U saqr -d saqr_behavioral_dna"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  kafka:
+    image: apache/kafka:3.8.0
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: "0"
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_HEAP_OPTS: "-Xmx512m -Xms256m"
+    volumes:
+      - saqr_kafka_data:/var/lib/kafka/data
+    mem_limit: 768m
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  neo4j:
+    image: neo4j:5-community
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD}
+      NEO4J_PLUGINS: '["graph-data-science"]'
+      NEO4J_dbms_security_procedures_unrestricted: gds.*
+      NEO4J_server_memory_heap_initial__size: "512m"
+      NEO4J_server_memory_heap_max__size: "512m"
+      NEO4J_server_memory_pagecache_size: "256m"
+    volumes:
+      - saqr_neo4j_data:/data
+    mem_limit: 1024m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+
+  behavioral-dna-engine:
+    build:
+      context: ./services/behavioral-dna-engine
+    restart: unless-stopped
+    environment:
+      SAQR_ENV: production
+      SAQR_DB_DSN: postgresql+asyncpg://saqr:${POSTGRES_PASSWORD}@postgres:5432/saqr_behavioral_dna
+      SAQR_REDIS_URL: redis://redis:6379/0
+      SAQR_REDIS_ENABLED: "true"
+      SAQR_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SAQR_KAFKA_OUTPUT_TOPIC: saqr.behavioral-dna.profile-updates
+      SAQR_KAFKA_ENABLED: "true"
+      SAQR_MIN_HISTORY_FOR_FULL_CONFIDENCE: "30"
+      SAQR_TRANSACTIONS_CSV_PATH: /data/transactions.csv
+      SAQR_DB_POOL_SIZE: "10"
+      SAQR_DB_MAX_OVERFLOW: "5"
+    volumes:
+      - ./transactions.csv:/data/transactions.csv:ro
+    mem_limit: 384m
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  graph-intelligence-engine:
+    build:
+      context: ./services/graph-intelligence-engine
+    restart: unless-stopped
+    environment:
+      SAQR_ENV: production
+      SAQR_NEO4J_URI: bolt://neo4j:7687
+      SAQR_NEO4J_USER: neo4j
+      SAQR_NEO4J_PASSWORD: ${NEO4J_PASSWORD}
+      SAQR_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SAQR_RAW_TX_TOPIC: saqr.transactions.raw
+      SAQR_BEHAVIORAL_DNA_TOPIC: saqr.behavioral-dna.profile-updates
+      SAQR_OUTPUT_TOPIC: saqr.graph-intelligence.updates
+    mem_limit: 256m
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  trust-intelligence-engine:
+    build:
+      context: ./services/trust-intelligence-engine
+    restart: unless-stopped
+    environment:
+      SAQR_ENV: production
+      SAQR_BEHAVIORAL_DNA_BASE_URL: http://behavioral-dna-engine:8001
+      SAQR_GRAPH_INTELLIGENCE_BASE_URL: http://graph-intelligence-engine:8002
+      SAQR_UPSTREAM_TIMEOUT_SECONDS: "3.0"
+    mem_limit: 192m
+    depends_on:
+      - behavioral-dna-engine
+      - graph-intelligence-engine
+
+  compliance-intelligence-engine:
+    build:
+      context: ./services/compliance-intelligence-engine
+    restart: unless-stopped
+    environment:
+      SAQR_ENV: production
+      SAQR_BEHAVIORAL_DNA_BASE_URL: http://behavioral-dna-engine:8001
+      SAQR_GRAPH_INTELLIGENCE_BASE_URL: http://graph-intelligence-engine:8002
+      SAQR_TRUST_INTELLIGENCE_BASE_URL: http://trust-intelligence-engine:8003
+      SAQR_UPSTREAM_TIMEOUT_SECONDS: "3.0"
+      SAQR_POLICY_REGISTRY_DIR: /data/compliance_policies/registry
+    volumes:
+      - ./compliance_policies:/data/compliance_policies:ro
+    mem_limit: 192m
+    depends_on:
+      - behavioral-dna-engine
+      - graph-intelligence-engine
+      - trust-intelligence-engine
+
+  decision-intelligence-engine:
+    build:
+      context: ./services/decision-intelligence-engine
+    restart: unless-stopped
+    environment:
+      SAQR_ENV: production
+      SAQR_BEHAVIORAL_DNA_BASE_URL: http://behavioral-dna-engine:8001
+      SAQR_GRAPH_INTELLIGENCE_BASE_URL: http://graph-intelligence-engine:8002
+      SAQR_TRUST_INTELLIGENCE_BASE_URL: http://trust-intelligence-engine:8003
+      SAQR_COMPLIANCE_BASE_URL: http://compliance-intelligence-engine:8004
+      SAQR_UPSTREAM_TIMEOUT_SECONDS: "3.0"
+    mem_limit: 192m
+    depends_on:
+      - behavioral-dna-engine
+      - graph-intelligence-engine
+      - trust-intelligence-engine
+      - compliance-intelligence-engine
+
+  dashboard:
+    build:
+      context: ./services/dashboard
+    restart: unless-stopped
+    environment:
+      SAQR_ENV: production
+      SAQR_BEHAVIORAL_DNA_BASE_URL: http://behavioral-dna-engine:8001
+      SAQR_GRAPH_INTELLIGENCE_BASE_URL: http://graph-intelligence-engine:8002
+      SAQR_TRUST_INTELLIGENCE_BASE_URL: http://trust-intelligence-engine:8003
+      SAQR_COMPLIANCE_BASE_URL: http://compliance-intelligence-engine:8004
+      SAQR_DECISION_BASE_URL: http://decision-intelligence-engine:8005
+      SAQR_UPSTREAM_TIMEOUT_SECONDS: "10.0"
+      SAQR_TRANSACTIONS_CSV_PATH: /data/transactions.csv
+      SAQR_BENCHMARK_JOBS_DIR: /srv/benchmark_data/jobs
+      SAQR_INFRA_SNAPSHOT_PATH: /srv/benchmark_data/infra_snapshot.json
+    volumes:
+      - ./transactions.csv:/data/transactions.csv:ro
+      - ./services/dashboard/benchmark_data:/srv/benchmark_data
+    mem_limit: 256m
+    depends_on:
+      - behavioral-dna-engine
+      - graph-intelligence-engine
+      - trust-intelligence-engine
+      - compliance-intelligence-engine
+      - decision-intelligence-engine
+
+  frontend:
+    build:
+      context: ./google-ai-studio-dashboard
+      args:
+        # Empty = same-origin relative /api/* calls, proxied by nginx below
+        # straight to the dashboard service. No CORS needed in production.
+        VITE_API_BASE_URL: ""
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    mem_limit: 256m
+    depends_on:
+      - dashboard
+
+  benchmark-frontend:
+    build:
+      context: ./saqr-compliance-benchmark-dashboard
+    restart: unless-stopped
+    mem_limit: 96m
+    depends_on:
+      - dashboard
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    mem_limit: 64m
+    depends_on:
+      - frontend
+      - dashboard
+      - benchmark-frontend
+
+volumes:
+  saqr_postgres_data:
+  saqr_kafka_data:
+  saqr_neo4j_data:
