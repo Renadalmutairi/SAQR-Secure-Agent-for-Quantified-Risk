@@ -380,9 +380,9 @@ The following are explicitly **not yet implemented** and are natural next steps,
 ## 18. Contributors
 
 - **Renad Almutairi** — [@Renadalmutairi](https://github.com/Renadalmutairi)
-- **Shaden M.** — [@shadendm](https://github.com/shadendm)
+- **Shaden Alghamdi** — [@shadendm](https://github.com/shadendm)
 - **Rawyah Albuainain** — [@rawyahalbuainain-arch](https://github.com/rawyahalbuainain-arch)
-- **Jamra** — [@jamra1](https://github.com/jamra1)
+- **Jana Alshammari** — [@jamra1](https://github.com/jamra1)
 - **Reem Alahmari** — [@reemalahmari](https://github.com/reemalahmari)
 
 ---
